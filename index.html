@@ -15,13 +15,16 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{font-family:var(--serif);font-size:clamp(1.05rem,2.6vw,1.25rem);line-height:1.6;color:var(--ink);background:var(--blush);overflow-x:hidden}
+[hidden]{display:none!important}
 button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
 :focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 svg{display:block}
 
 /* ---------- Fondo de video + pétalos ---------- */
 .bg{position:fixed;inset:0;z-index:-3;overflow:hidden;background:#e9c9c9}
-.bg iframe{position:absolute;top:50%;left:50%;width:100vw;height:56.25vw;min-height:100vh;min-width:177.78vh;transform:translate(-50%,-50%);border:0;pointer-events:none}
+.bg video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1.5s ease}
+.bg video.on{opacity:1}
+body.sinvideo .bg,body.sinvideo .veil{display:none}
 .veil{position:fixed;inset:0;z-index:-2;background:linear-gradient(180deg,rgba(255,244,240,.55),rgba(247,228,225,.72))}
 #petals{position:fixed;inset:0;z-index:5;pointer-events:none}
 
@@ -105,7 +108,16 @@ p+p{margin-top:.6em}
 .dots button.on{background:var(--rose-d);transform:scale(1.5)}
 
 /* ---------- Canva (opcional) ---------- */
-.canva{width:100%;aspect-ratio:9/16;max-height:70svh;border:0;border-radius:18px;margin-top:14px;background:#fff}
+.inv{display:block;width:100%;margin-top:14px;padding:0;border-radius:18px;overflow:hidden;border:6px solid var(--ivory);outline:1.5px solid var(--gold);
+  box-shadow:0 18px 40px rgba(90,30,50,.3);position:relative;transition:transform .5s cubic-bezier(.2,.7,.2,1)}
+.inv:hover{transform:translateY(-4px) scale(1.015)}
+.inv img{width:100%;height:auto;display:block}
+.inv::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.55) 50%,transparent 65%);transform:translateX(-120%);animation:brillo 4.5s ease-in-out infinite}
+@keyframes brillo{55%,100%{transform:translateX(120%)}}
+.hint{font-size:.85em;font-style:italic;margin-top:10px}
+#lb{position:fixed;inset:0;z-index:60;background:rgba(40,15,25,.88);display:none;place-items:center;padding:16px;cursor:zoom-out}
+#lb.on{display:grid}
+#lb img{max-width:100%;max-height:100%;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
 
 /* ---------- Ubicación ---------- */
 .tabs{display:flex;gap:8px;justify-content:center;margin:12px 0}
@@ -161,7 +173,7 @@ p+p{margin-top:.6em}
   </defs>
 </svg>
 
-<div class="bg"><iframe id="yt" title="Video de fondo" allow="autoplay; encrypted-media" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+<div class="bg"><video id="vid" muted loop playsinline autoplay preload="auto" disablepictureinpicture aria-hidden="true"></video></div>
 <div class="veil"></div>
 <canvas id="petals"></canvas>
 
@@ -237,9 +249,16 @@ p+p{margin-top:.6em}
     </div>
   </section>
 
-  <section id="canvaSec" hidden>
-    <div class="panel sq"><h2>Mi invitación</h2><iframe class="canva" id="canva" title="Diseño de Canva" allowfullscreen loading="lazy"></iframe></div>
+  <section id="invSec">
+    <div class="panel">
+      <svg class="corner tl"><use href="#rama" width="100%" height="100%"/></svg>
+      <h2>Mi invitación</h2>
+      <button class="inv" id="invBtn" aria-label="Ver la invitación en grande"><img id="invImg" alt="Invitación a los XV años" loading="lazy"></button>
+      <p class="hint">Toca la imagen para verla en grande</p>
+      <a class="btn" id="invLink" target="_blank" rel="noopener" hidden>Abrir invitación completa</a>
+    </div>
   </section>
+  <div id="lb"><img id="lbImg" alt=""></div>
 
   <section>
     <div class="panel sq">
@@ -279,21 +298,22 @@ const CONFIG = {
   nombre: 'Valeria',
   fecha: '2026-10-10T17:00:00',          // AAAA-MM-DDTHH:MM:SS
   mensaje: 'Hoy dejo atrás mi niñez para comenzar una nueva etapa. Quiero compartir este día tan especial contigo.',
-  padres: 'Rafael López y Ana Torres',
+  padres: 'Brenda Leal Reyes',
   padrinos: 'Pedro Pérez y Mónica Bernal',
-  vestimenta: 'Etiqueta. Te sugerimos evitar tonos rosa y durazno, reservados para la quinceañera.',
+  vestimenta: 'Etiqueta. Te sugerimos evitar....',
   limiteConfirmar: '5 de diciembre',
   whatsapp: '5215512345678',              // país + número, sin signos
-  // >>> VIDEO DE FONDO: para cambiarlo, reemplaza el ID de abajo por el de otro video de YouTube.
-  // El ID es la parte del enlace que va después de "youtu.be/" o de "watch?v=" (sin lo que sigue de "?si=" o "&").
-  youtubeId: 'j3ObHjm1fAE',
-  canvaEmbed: '',                         // opcional: enlace de Canva (Compartir > Más > Insertar)
+  // >>> VIDEO DE FONDO: pega aquí la URL directa de tu video alojado en tu hosting (.mp4 o .webm).
+  // Ejemplo: 'https://tu-hosting.com/videos/fondo.mp4'. Si la URL está vacía o el video no carga, no se muestra ningún fondo.
+  videoUrl: '',
+  // >>> INVITACIÓN: 'imagen' es la URL de tu diseño exportado (PNG/JPG, por ejemplo desde Canva). 'canva' (opcional) es el enlace para abrirlo completo.
+  invitacion: { imagen: 'https://picsum.photos/seed/invitacion/700/1100', canva: '' },
   imagenes: [                              // pon aquí tus fotos (URL o archivo local). Si exportas diseños de Canva como PNG/JPG, también van aquí
-    'https://picsum.photos/seed/xv1/600/900',
-    'https://picsum.photos/seed/xv2/600/900',
-    'https://picsum.photos/seed/xv3/600/900',
-    'https://picsum.photos/seed/xv4/600/900',
-    'https://picsum.photos/seed/xv5/600/900'
+    'https://emprendedorinteligente1502-crypto.github.io/15github.io/IMG-20261001-WA0022.jpg',
+    'https://emprendedorinteligente1502-crypto.github.io/15github.io/IMG-20261001-WA0024.jpg',
+    'https://emprendedorinteligente1502-crypto.github.io/15github.io/IMG-20261001-WA0031.jpg',
+    'https://emprendedorinteligente1502-crypto.github.io/15github.io/IMG-20261001-WA0025.jpg',
+    'https://emprendedorinteligente1502-crypto.github.io/15github.io/IMG-20261001-WA0004.jpg'
   ],
   lugares: [                               // 'consulta' = dirección o nombre tal como lo escribirías en Google Maps
     {titulo:'Ceremonia',  nombre:'Iglesia Sagrado Corazón', hora:'5:00 PM', consulta:'Catedral Metropolitana, Ciudad de México'},
@@ -350,8 +370,16 @@ function verLugar(n){
 CONFIG.lugares.forEach((l,i)=>{const b=document.createElement('button');b.textContent=l.titulo;b.onclick=()=>verLugar(i);$('tabs').appendChild(b)});
 verLugar(0);
 
-/* ---------- Canva opcional ---------- */
-if (CONFIG.canvaEmbed){ $('canva').src = CONFIG.canvaEmbed; $('canvaSec').hidden = false; }
+/* ---------- Sección de invitación ---------- */
+if (CONFIG.invitacion && CONFIG.invitacion.imagen){
+  $('invImg').src = CONFIG.invitacion.imagen;
+  $('lbImg').src = CONFIG.invitacion.imagen;
+  $('invImg').onerror = ()=>{ $('invSec').hidden = true };
+  $('invBtn').onclick = ()=>$('lb').classList.add('on');
+  $('lb').onclick = ()=>$('lb').classList.remove('on');
+  addEventListener('keydown',e=>{ if(e.key==='Escape') $('lb').classList.remove('on') });
+  if (CONFIG.invitacion.canva){ $('invLink').href = CONFIG.invitacion.canva; $('invLink').hidden = false }
+} else { $('invSec').hidden = true }
 
 /* ---------- Slider coverflow ---------- */
 const stage = $('stage'), N = CONFIG.imagenes.length;
@@ -383,17 +411,29 @@ addEventListener('pointerup',e=>{ if(x0===null)return; const dx=e.clientX-x0; x0
 addEventListener('keydown',e=>{ if(e.key==='ArrowRight')go(cur+1); if(e.key==='ArrowLeft')go(cur-1); });
 addEventListener('resize',layout); layout(); restart();
 
-/* ---------- Video de YouTube de fondo ---------- */
-const yt = $('yt'), id = CONFIG.youtubeId;
-yt.src = `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&modestbranding=1&playsinline=1&rel=0&iv_load_policy=3&disablekb=1&enablejsapi=1` + (location.protocol.startsWith('http') ? '&origin=' + encodeURIComponent(location.origin) : '');
-const cmd = (f,a=[]) => yt.contentWindow.postMessage(JSON.stringify({event:'command',func:f,args:a}),'*');
-let sonido = false;
-function setSonido(on){
-  sonido = on; cmd(on?'unMute':'mute'); if(on){cmd('setVolume',[60]);cmd('playVideo')}
-  $('sndOn').style.display = on ? '' : 'none'; $('sndOff').style.display = on ? 'none' : '';
+/* ---------- Video de fondo (URL externa) ---------- */
+const vid = $('vid');
+let sonido = false, videoOk = false;
+function pintar(){ $('sndOn').style.display = sonido ? '' : 'none'; $('sndOff').style.display = sonido ? 'none' : ''; }
+function sinVideo(){
+  document.body.classList.add('sinvideo'); $('snd').style.display = 'none';
+  vid.pause(); vid.removeAttribute('src'); vid.load();
 }
-setSonido(false);
+function setSonido(on){
+  if (on && !videoOk) return;
+  sonido = on; vid.muted = !on;
+  if (on) vid.play().catch(()=>{ vid.muted = true; sonido = false; pintar() });
+  pintar();
+}
 $('snd').onclick = ()=>setSonido(!sonido);
+if (CONFIG.videoUrl){
+  const limite = setTimeout(()=>{ if(!videoOk) sinVideo() }, 12000);
+  vid.addEventListener('playing',()=>{ videoOk = true; clearTimeout(limite); vid.classList.add('on') });
+  vid.addEventListener('error',()=>{ clearTimeout(limite); sinVideo() });
+  vid.src = CONFIG.videoUrl;
+  vid.play().catch(()=>{});
+} else { sinVideo() }
+pintar();
 
 /* ---------- Portada: abrir invitación ---------- */
 $('open').onclick = ()=>{
